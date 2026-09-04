@@ -1,0 +1,72 @@
+# CelebA 64x64 score/denoiser model.
+# Hyperparameters match the training run that produced the released CelebA
+# score model (see its .hydra/config.yaml). Note: that run used
+# model_channels=128 and full fp32 precision.
+defaults:
+  - _self_
+
+hydra:
+  run:
+    dir: outputs/score/${data.name}/${now:%Y-%m-%d_%H-%M-%S}
+
+seed: 42
+
+trainer:
+  max_epochs: 100
+  precision: 32-true
+  accelerator: gpu
+  devices: [0]
+
+loss:
+  h_max: 20.0
+  h_min: 0.002
+  sampling_method: uniform
+
+optimizer:
+  name: adam
+  lr: 2.0e-4
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+  weight_decay: 0.0
+  gradient_clip_val: 1.0
+  gradient_clip_algorithm: norm
+
+model:
+  name: unet
+  params:
+    in_channels: 3
+    image_size: [64, 64]
+    model_channels: 128
+    num_res_blocks: 3
+    channel_factor: 3
+    attention_resolutions: [4, 8]
+    channel_mult: [1, 2, 2, 2]
+    output_dim: 12288
+    rank: 1
+    out_bias: false
+
+data:
+  name: celeba
+  data_root: ${hydra:runtime.cwd}/data/celeba
+  batch_size: 256
+  num_workers: 4
+  image_size: 64
+  pin_memory: true
+  drop_last: true
+
+eval:
+  name: celeba_score_viz
+  eval_every_n_epochs: 1
+  h_values: [0.01, 0.1, 1.0, 5.0]
+  noise_seed: 0
+  image_indices: [0, 1, 2, 3]
+
+checkpoint:
+  dirpath: checkpoints
+  filename: "{epoch:04d}"
+  every_n_epochs: 10
+  save_last: true
+
+logger:
+  project: metric-matching-score
+  entity: null

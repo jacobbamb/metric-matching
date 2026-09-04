@@ -1,0 +1,75 @@
+# MNIST metric matching (mean-centred loss).
+# Hyperparameters follow the paper's Appendix E.4 MNIST configuration
+# (h in [1e-4, 25], Gaussian augmentation with std 0.1, up to 1500 epochs).
+# The run that produced the paper's released MNIST model used h in [1, 10],
+# no augmentation and 2000 epochs instead.
+defaults:
+  - _self_
+
+hydra:
+  run:
+    dir: outputs/metric/${data.name}/${now:%Y-%m-%d_%H-%M-%S}
+
+trainer:
+  max_epochs: 1500
+  precision: 32
+  accelerator: gpu
+  devices: [0]
+
+loss:
+  h_max: 25.0
+  h_min: 0.0001
+  sampling_method: uniform
+  smart_training: true
+  mean_centered: true
+  # Pretrained score model for the mean-centred loss. By convention this is
+  # the directory scripts/train_score.py writes to; score_epoch null loads
+  # the newest run's last.ckpt. Train it first:
+  #   python scripts/train_score.py --config-name mnist
+  score_path: ${hydra:runtime.cwd}/outputs/score/mnist
+  score_epoch: null
+
+optimizer:
+  name: adam
+  lr: 2.0e-4
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+  weight_decay: 0.0
+  gradient_clip_val: 1.0
+  gradient_clip_algorithm: norm
+
+model:
+  name: unet
+  params:
+    in_channels: 1
+    image_size: [28, 28]
+    model_channels: 64
+    num_res_blocks: 2
+    rank: 100
+    output_dim: 784
+    attention_resolutions: [4]
+    channel_mult: [1, 2, 2]
+    out_bias: true
+
+data:
+  name: mnist
+  batch_size: 128
+  num_workers: 4
+  data_dir: ${hydra:runtime.cwd}/data
+  noise_level: 0.1
+
+checkpoint:
+  dirpath: checkpoints
+  filename: "{epoch:04d}"
+  every_n_epochs: 100
+  save_last: true
+
+logger:
+  project: metric-matching
+  entity: null
+
+eval:
+  name: subset_eval
+  eval_subset_size: 100
+  batch_size: 128
+  eval_every_n_epochs: 50

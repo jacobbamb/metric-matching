@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "metric-matching"
+version = "1.0.0"
+description = "Riemannian metric matching: learning the carre du champ operator of data distributions with neural networks"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = [
+    "torch>=2.2",
+    "torchvision>=0.17",
+    "lightning>=2.2",
+    "hydra-core>=1.3",
+    "omegaconf>=2.3",
+    "wandb>=0.16",
+    "numpy>=1.24",
+    "matplotlib>=3.7",
+    "pandas>=2.0",
+    "tqdm>=4.65",
+    "scikit-learn>=1.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+# Bare `pytest` from the repo root collects only the tracked suite; the
+# norecursedirs list keeps local data, run outputs, environments and archives
+# out of collection even when a directory is passed explicitly.
+testpaths = ["tests"]
+norecursedirs = [
+    ".*", "*.egg", "build", "dist", "node_modules", "venv", "__pycache__",
+    "data", "outputs", "outputs_local", "final_models", "old", "other_repos",
+    "wandb", "mm", "lightning_logs", "analysis", "app_analysis",
+    "slurm_output", "slurm_scripts", "througput_results", "*_cache",
+]

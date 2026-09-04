@@ -1,0 +1,63 @@
+# Synthetic d-sphere in R^D, metric matching with the FiLM-conditioned MLP.
+# No run record survives for the paper's sphere experiments; these values
+# match the paper's Appendix E.3 configuration.
+defaults:
+  - _self_
+
+hydra:
+  run:
+    dir: outputs/metric/${data.name}/${now:%Y-%m-%d_%H-%M-%S}
+
+trainer:
+  max_epochs: 3000
+  precision: 32
+  accelerator: gpu
+  devices: [0]
+
+data:
+  name: sphere
+  num_points: 10000
+  batch_size: 1024
+  num_workers: 4
+  d: 8
+  D: 64
+  noise_level: 0.0
+
+model:
+  name: mlp
+  params:
+    input_dim: 64
+    hidden_dim: 1024
+    num_layers: 4
+    rank: 16
+    output_dim: 64
+    time_embedding: true
+
+loss:
+  h_max: 16.0
+  h_min: 0.0001
+  sampling_method: lognormal
+  smart_training: true
+  mean_centered: false
+  score_path: null
+
+optimizer:
+  name: adamw
+  lr: 1e-4
+  weight_decay: 0.0
+
+eval:
+  name: subset_eval
+  eval_subset_size: 100
+  batch_size: 128
+  eval_every_n_epochs: 100
+
+checkpoint:
+  dirpath: checkpoints
+  filename: "{epoch:04d}"
+  every_n_epochs: 100
+  save_last: true
+
+logger:
+  project: metric-matching
+  entity: null

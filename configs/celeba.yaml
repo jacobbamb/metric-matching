@@ -1,0 +1,76 @@
+# CelebA 64x64 metric matching (mean-centred loss).
+# Hyperparameters match the training run that produced the released CelebA
+# metric model (see its .hydra/config.yaml).
+defaults:
+  - _self_
+
+hydra:
+  run:
+    dir: outputs/metric/${data.name}/${now:%Y-%m-%d_%H-%M-%S}
+
+trainer:
+  max_epochs: 200
+  precision: bf16-mixed
+  accelerator: gpu
+  devices: [0]
+
+data:
+  name: celeba
+  data_root: ${hydra:runtime.cwd}/data/celeba
+  batch_size: 256
+  num_workers: 4
+  image_size: 64
+  pin_memory: true
+  drop_last: true
+
+model:
+  name: unet
+  params:
+    in_channels: 3
+    image_size: [64, 64]
+    model_channels: 64
+    num_res_blocks: 3
+    rank: 128
+    channel_factor: 3
+    attention_resolutions: [4, 8]
+    channel_mult: [1, 2, 2, 2]
+    output_dim: 12288
+    out_bias: true
+
+loss:
+  h_max: 5.0
+  h_min: 1.0
+  sampling_method: uniform
+  smart_training: true
+  mean_centered: true
+  # Pretrained score model for the mean-centred loss. Train it first:
+  #   python scripts/train_score.py --config-name celeba
+  score_path: ${hydra:runtime.cwd}/outputs/score/celeba
+  score_epoch: null
+
+optimizer:
+  name: adamW
+  lr: 5.0e-5
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+  weight_decay: 0.0
+  gradient_clip_val: 1.0
+  gradient_clip_algorithm: norm
+
+eval:
+  name: celeba_viz
+  eval_every_n_epochs: 1
+  h_values: [1.0, 5.0, 10.0]
+  perturb_scale: 12.0
+  image_indices: [0, 1, 2, 3]
+  eigenvector_indices: [0, 1, 2, 3]
+
+checkpoint:
+  dirpath: checkpoints
+  filename: "{epoch:04d}"
+  every_n_epochs: 10
+  save_last: true
+
+logger:
+  project: metric-matching
+  entity: null

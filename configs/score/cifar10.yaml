@@ -1,0 +1,66 @@
+# CIFAR-10 score/denoiser model.
+# Hyperparameters match the training run that produced the released CIFAR-10
+# score model (see its .hydra/config.yaml).
+defaults:
+  - _self_
+
+hydra:
+  run:
+    dir: outputs/score/${data.name}/${now:%Y-%m-%d_%H-%M-%S}
+
+seed: 42
+
+trainer:
+  max_epochs: 200
+  precision: 32
+  accelerator: gpu
+  devices: [0]
+
+loss:
+  h_max: 5.0
+  h_min: 0.02
+  sampling_method: uniform
+
+optimizer:
+  name: adam
+  lr: 2.0e-4
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+  weight_decay: 0.0
+  gradient_clip_val: 1.0
+  gradient_clip_algorithm: norm
+
+model:
+  name: unet
+  params:
+    in_channels: 3
+    out_channels: 3
+    image_size: [32, 32]
+    model_channels: 128
+    num_res_blocks: 2
+    attention_resolutions: [2]
+    channel_mult: [1, 2, 2, 2]
+    output_dim: 3072
+    rank: 1
+    num_heads: 4
+    num_head_channels: 64
+    dropout: 0.1
+    channel_factor: 3
+    out_bias: false
+
+data:
+  name: cifar10
+  batch_size: 128
+  num_workers: 4
+  data_dir: ${hydra:runtime.cwd}/data
+  noise_level: 0.0
+
+checkpoint:
+  dirpath: checkpoints
+  filename: "{epoch:04d}"
+  every_n_epochs: 20
+  save_last: true
+
+logger:
+  project: metric-matching-score
+  entity: null
